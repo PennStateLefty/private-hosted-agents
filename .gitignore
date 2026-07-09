@@ -1,0 +1,23 @@
+# Bicep
+*.azure/
+.bicep/
+
+# Azure / azd
+.azure/
+
+# Local env / secrets — never commit
+*.env
+.env*
+*.pem
+*.pfx
+*.key
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# MCAPS confidential research must NEVER live in a demo repo
+docs/research/
+mcaps_*controls*.yaml
+mcaps_*catalog*.yaml

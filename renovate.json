@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "bicep": { "enabled": true },
+  "packageRules": [
+    {
+      "description": "Group Azure Verified Module (AVM) bumps",
+      "matchDatasources": ["azure-bicep-resource"],
+      "groupName": "Azure Verified Modules"
+    }
+  ]
+}
