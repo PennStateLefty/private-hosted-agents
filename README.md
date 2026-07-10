@@ -40,3 +40,20 @@ The template embeds **references** — the Skill name, AVM module refs, and disc
 instructions — not copies of volatile state. Live handles come from Azure MCP; policy
 comes from the locally-updated Skill; module versions are bumped by Renovate. New demos
 pick up the latest by construction.
+
+## This demo: private hosted agents (Phase 1 infrastructure)
+
+This repo is being used to test the new C# **Foundry hosted agents** against a private,
+MCAPS-compliant environment. **Phase 1 = infrastructure** (private Foundry + Agent Service
+spoke + optional APIM AI Gateway). See **[`PROVISION.md`](PROVISION.md)** for the full runbook.
+
+| Path | Purpose |
+| --- | --- |
+| [`landing-zone/`](landing-zone/) | Vendored `troyhite/bicep-ptn-aiml-landing-zone` (pinned) — the private Foundry/Agent-Service spoke, run via `azd` in `ailz-integrated` mode |
+| [`scripts/configure-azd-env.sh`](scripts/configure-azd-env.sh) | Sets every `azd` env var for the `mcaps-foundation` hub |
+| [`scripts/prep-hub-dns.sh`](scripts/prep-hub-dns.sh) | Pre-creates + hub-links the missing privatelink DNS zones |
+| [`scripts/post-provision.sh`](scripts/post-provision.sh) | Reverse hub→spoke peering (gateway transit) + hub-links spoke DNS zones |
+| [`infra/`](infra/) | Additive **APIM GenAI gateway** in front of the Foundry account |
+
+Non-production scope: a compliance + private-network **simulation** (single hub, cross-region
+spoke), not a production topology.

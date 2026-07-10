@@ -1,0 +1,4 @@
+source: https://github.com/troyhite/bicep-ptn-aiml-landing-zone
+pinned-commit: 2c52f400b65ba68207bfe67cbe157d349803805d
+vendored: 2026-07-09T19:21:10Z
+excluded: .git, media/, CHANGELOG.md, tests/, pipelines/

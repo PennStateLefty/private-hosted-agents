@@ -1,19 +1,27 @@
 using './main.bicep'
 
-// Fill these from the landing zone. Discover the resource IDs at deploy time via the
-// Azure MCP server (rg-connectivity-hub / rg-dns) — do NOT hardcode them long-term.
+// Phase 1 AI Gateway params. Populate the *ResourceId/endpoint values from the
+// landing-zone azd outputs after `azd provision`:
+//   cd landing-zone && azd env get-values
+// Do NOT hardcode long-term — these are per-deployment handles.
 
-param demoName = 'sample'
-param location = 'centralus'
+param spokeResourceGroupName = '<landing-zone spoke RG, e.g. rg-pha-dev>'
+param location = 'northcentralus'
+param aiGatewayName = 'apim-pha-dev'
 
-// e.g. the hub's snet-privateendpoints subnet resourceId
-param privateEndpointSubnetId = '<discover: hub snet-privateendpoints resourceId>'
+param userAssignedIdentityId = '<lz output: user-assigned MI resourceId>'
+param foundryOpenAiEndpoint = '<lz output: https://<account>.openai.azure.com/>'
+// Use the spoke-local Log Analytics workspace the landing zone creates in
+// northcentralus — NOT the Central US hub LAW (avoids cross-region log egress).
+param logAnalyticsWorkspaceId = '<lz output: spoke-local LAW resourceId (northcentralus)>'
 
-// e.g. { blob: '<id>', vaultcore: '<id>', azurecr: '<id>' } from rg-dns privatelink.* zones
-param privateDnsZoneIds = {}
+// Optional: delegated APIM subnet for StandardV2 VNet integration (leave '' to skip).
+param apimSubnetResourceId = ''
+
+param tokensPerMinute = 20000
 
 param tags = {
-  workload: 'demo-sample'
+  workload: 'private-hosted-agents'
   environment: 'dev'
   // serviceTree: '<map to a valid Service Tree service — SFI-010>'
 }

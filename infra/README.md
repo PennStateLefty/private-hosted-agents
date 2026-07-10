@@ -8,7 +8,7 @@ Your demo's Bicep. Subscription-scoped (`targetScope = 'subscription'`), built o
 ```bash
 # discover live landing-zone handles first (via Azure MCP), fill main.bicepparam, then:
 az deployment sub create \
-  --location centralus \
+  --location northcentralus \
   --template-file infra/main.bicep \
   --parameters infra/main.bicepparam
 ```

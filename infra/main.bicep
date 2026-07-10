@@ -1,53 +1,62 @@
-// main.bicep — demo workload skeleton for the MCAPS mcaps-foundation landing zone.
+// main.bicep — Phase 1 additive AI Gateway for the private hosted-agents spoke.
 //
-// This is an intentionally thin starting point. Fill it in with the help of the
-// `scaffold-demo` agent + the `mcaps-compliance` Skill, discovering live landing-zone
-// handles (hub VNet, PE subnet, private DNS zone IDs) via the Azure MCP server.
+// The landing zone (landing-zone/, troyhite/bicep-ptn-aiml-landing-zone in
+// ailz-integrated mode) provisions the private Foundry account, project, Agent
+// Service, spoke VNet + private-endpoint subnet, and DNS. This template adds an
+// APIM GenAI gateway in FRONT of that Foundry account, consuming the LZ outputs.
 //
-// Golden rules (see .github/copilot-instructions.md):
-//   - AVM modules (br/public:avm/res/...), pinned + Renovate-managed
-//   - publicNetworkAccess 'Disabled' + private endpoints into the hub privatelink.* zones
-//   - Entra / managed-identity auth only (no keys/secrets)
-//   - subnets defaultOutboundAccess:false; idempotent; approved region (default Central US)
+// Deploy AFTER `azd provision` of the landing zone:
+//   az deployment sub create -l northcentralus -f infra/main.bicep -p infra/main.bicepparam
+//
+// Golden rules (see .github/copilot-instructions.md): AVM modules pinned; PNA Disabled +
+// private endpoints; managed-identity auth only; approved region; idempotent.
 
 targetScope = 'subscription'
 
-@description('Demo name — used to derive resource names and the spoke RG.')
-param demoName string
+@description('Spoke resource group created by the landing zone (BYO — must already exist).')
+param spokeResourceGroupName string
 
-@description('Deployment region. Approved regions only; never West Europe for non-prod.')
-param location string = 'centralus'
+@description('Region — must match the spoke (e.g. northcentralus).')
+param location string = 'northcentralus'
 
-@description('Resource IDs discovered from the landing zone at deploy time (do NOT hardcode).')
-param privateEndpointSubnetId string
-param privateDnsZoneIds object = {}
+@description('APIM AI gateway name.')
+param aiGatewayName string
 
-@description('Common tags (map workload identity to Service Tree per SFI-010).')
+@description('User-assigned managed identity resourceId used to call Foundry (landing-zone output).')
+param userAssignedIdentityId string
+
+@description('Foundry / Azure OpenAI inference endpoint (landing-zone output).')
+param foundryOpenAiEndpoint string
+
+@description('Shared Log Analytics workspace resourceId for diagnostics.')
+param logAnalyticsWorkspaceId string
+
+@description('Delegated APIM subnet resourceId for StandardV2 VNet integration (optional).')
+param apimSubnetResourceId string = ''
+
+@description('Per-key token-per-minute limit at the gateway.')
+param tokensPerMinute int = 20000
+
 param tags object = {}
 
-var namePrefix = 'demo-${demoName}'
-
-resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: 'rg-${namePrefix}'
-  location: location
-  tags: tags
+resource spokeRg 'Microsoft.Resources/resourceGroups@2024-03-01' existing = {
+  name: spokeResourceGroupName
 }
 
-// ── TODO: add your workload here ─────────────────────────────────────────────
-// Example (uncomment + pin a version, then apply compliant presets from the Skill):
-//
-// module storage 'br/public:avm/res/storage/storage-account:<ver>' = {
-//   scope: rg
-//   name: 'storage'
-//   params: {
-//     name: replace('st${namePrefix}', '-', '')
-//     allowSharedKeyAccess: false
-//     allowBlobPublicAccess: false
-//     publicNetworkAccess: 'Disabled'
-//     privateEndpoints: [ { subnetResourceId: privateEndpointSubnetId, privateDnsZoneResourceIds: [ privateDnsZoneIds.blob ] } ]
-//     tags: tags
-//   }
-// }
-// ─────────────────────────────────────────────────────────────────────────────
+module aiGateway 'modules/ai-gateway.bicep' = {
+  scope: spokeRg
+  name: 'ai-gateway'
+  params: {
+    name: aiGatewayName
+    location: location
+    userAssignedIdentityId: userAssignedIdentityId
+    foundryOpenAiEndpoint: foundryOpenAiEndpoint
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
+    subnetResourceId: apimSubnetResourceId
+    tokensPerMinute: tokensPerMinute
+    tags: tags
+  }
+}
 
-output resourceGroupName string = rg.name
+output aiGatewayResourceId string = aiGateway.outputs.apimResourceId
+output aiGatewayName string = aiGateway.outputs.apimName
