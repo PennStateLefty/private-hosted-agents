@@ -62,9 +62,19 @@ cd workshop-concierge-adk/tools/teams-testtool
 # opens the web chat UI in your browser
 ```
 
-The Playground defaults its bot endpoint to `http://localhost:3978/api/messages`; it is
-also pinned in [`.teamsapptesttool.yml`](./.teamsapptesttool.yml). Requires Node.js +
-npm (verified with Node 26 / npm 11).
+The Playground defaults its bot endpoint to `http://localhost:3978/api/messages`;
+`run-testtool.sh` pins it (and `DEFAULT_CHANNEL_ID=msteams`) via env vars. Requires
+Node.js + npm (verified with Node 26 / npm 11).
+
+> **Note — tool rename & config format.** The "Teams App Test Tool" is now **Microsoft
+> 365 Agents Playground**. The current CLI uses built-in mock data by default (no config
+> file needed) and validates any config against a **new** schema (`.m365agentsplayground.yml`
+> with root `tenantId` + a `bot` block + exactly five `users`). The old
+> `.teamsapptesttool.yml` schema (`version: v1.0` / `config.botEndpoint`) is now **rejected**
+> with `ConfigFileParseError: must have required property 'tenantId'`, so this harness ships
+> **no** config file and pins the endpoint via `BOT_ENDPOINT` instead. Only add a
+> `.m365agentsplayground.yml` if you need custom Teams context — see
+> <https://aka.ms/teams-app-test-tool-config-guide>.
 
 ### Try it
 
@@ -121,5 +131,4 @@ one used for real publishing; no separate manifest is needed here.
 | `run-bot.sh` | Start the host on `:3978`. |
 | `run-testtool.sh` | Start the Agents Playground pointed at the host. |
 | `smoke.py` | Headless round-trip check against a running host (no browser). |
-| `.teamsapptesttool.yml` | Pins the Playground's bot endpoint. |
 | `requirements.txt` | Test-only deps (`aiohttp`). Mirrors the `testtool` extra in `pyproject.toml`. |
