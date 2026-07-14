@@ -1,0 +1,4 @@
+- generic [ref=e5]:
+  - heading "Excalidraw for Microsoft 365" [level=1] [ref=e6]
+  - paragraph [ref=e7]: Sign in to start drawing and collaborating.
+  - button "Sign in with Microsoft" [ref=e8] [cursor=pointer]

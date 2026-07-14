@@ -1,0 +1,64 @@
+[2026-07-10T15:48:05-04:00] Authentication: AzureDeveloperCLICredential.GetToken() acquired a token for scope "https://ai.azure.com/.default"
+[2026-07-10T15:48:06-04:00] Authentication: AzureDeveloperCLICredential.GetToken() acquired a token for scope "https://ai.azure.com/.default"
+[2026-07-10T15:48:07-04:00] Retry: =====> Try=1 for GET https://graph.microsoft.com/v1.0/me
+[2026-07-10T15:48:07-04:00] Authentication: AzureDeveloperCLICredential.GetToken() acquired a token for scope "https://graph.microsoft.com/.default"
+[2026-07-10T15:48:07-04:00] Request: ==> OUTGOING REQUEST (Try=1)
+   GET https://graph.microsoft.com/v1.0/me
+   Authorization: REDACTED
+   User-Agent: azsdk-go-graph/1.0.0 (go1.26.4-X:loopvar; darwin)
+
+[2026-07-10T15:48:08-04:00] Response: ==> REQUEST/RESPONSE (Try=1/284.253125ms, OpTime=284.296041ms) -- RESPONSE RECEIVED
+   GET https://graph.microsoft.com/v1.0/me
+   Authorization: REDACTED
+   User-Agent: azsdk-go-graph/1.0.0 (go1.26.4-X:loopvar; darwin)
+   --------------------------------------------------------------------------------
+   RESPONSE Status: 200 OK
+   Cache-Control: no-cache
+   Client-Request-Id: REDACTED
+   Connection: keep-alive
+   Content-Type: application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+   Date: Fri, 10 Jul 2026 19:48:08 GMT
+   Odata-Version: REDACTED
+   Request-Id: b7c4d419-7ec1-42ed-85a9-8e3a44436f57
+   Strict-Transport-Security: REDACTED
+   Vary: REDACTED
+   X-Cache: REDACTED
+   X-Ms-Ags-Diagnostic: REDACTED
+   X-Ms-Resource-Unit: REDACTED
+
+[2026-07-10T15:48:08-04:00] Retry: response 200
+[2026-07-10T15:48:08-04:00] Retry: exit due to non-retriable status code
+[2026-07-10T15:48:08-04:00] Retry: =====> Try=1 for GET https://management.azure.com/subscriptions/987a5b92-2573-4981-a76c-bbd7756592c8/resourceGroups/rg-pha-dev/providers/Microsoft.CognitiveServices/accounts/aif-zliorc-pha-dev-ncus-001/projects/aifp-zliorc-pha-dev-ncus-001/providers/Microsoft.Authorization/roleAssignments?%24filter=REDACTED&api-version=2022-04-01
+[2026-07-10T15:48:08-04:00] Authentication: AzureDeveloperCLICredential.GetToken() acquired a token for scope "https://management.core.windows.net//.default"
+[2026-07-10T15:48:08-04:00] Request: ==> OUTGOING REQUEST (Try=1)
+   GET https://management.azure.com/subscriptions/987a5b92-2573-4981-a76c-bbd7756592c8/resourceGroups/rg-pha-dev/providers/Microsoft.CognitiveServices/accounts/aif-zliorc-pha-dev-ncus-001/projects/aifp-zliorc-pha-dev-ncus-001/providers/Microsoft.Authorization/roleAssignments?%24filter=REDACTED&api-version=2022-04-01
+   Accept: application/json
+   Authorization: REDACTED
+   User-Agent: azsdk-go-armauthorization/v3.0.0-beta.2 (go1.26.4-X:loopvar; darwin)
+
+[2026-07-10T15:48:09-04:00] Response: ==> REQUEST/RESPONSE (Try=1/338.383334ms, OpTime=338.452959ms) -- RESPONSE RECEIVED
+   GET https://management.azure.com/subscriptions/987a5b92-2573-4981-a76c-bbd7756592c8/resourceGroups/rg-pha-dev/providers/Microsoft.CognitiveServices/accounts/aif-zliorc-pha-dev-ncus-001/projects/aifp-zliorc-pha-dev-ncus-001/providers/Microsoft.Authorization/roleAssignments?%24filter=REDACTED&api-version=2022-04-01
+   Accept: application/json
+   Authorization: REDACTED
+   User-Agent: azsdk-go-armauthorization/v3.0.0-beta.2 (go1.26.4-X:loopvar; darwin)
+   --------------------------------------------------------------------------------
+   RESPONSE Status: 200 OK
+   Cache-Control: no-cache
+   Content-Length: 5386
+   Content-Type: application/json; charset=utf-8
+   Date: Fri, 10 Jul 2026 19:48:08 GMT
+   Expires: -1
+   Pragma: no-cache
+   Strict-Transport-Security: REDACTED
+   X-Cache: REDACTED
+   X-Content-Type-Options: REDACTED
+   X-Ms-Correlation-Request-Id: REDACTED
+   X-Ms-Operation-Identifier: REDACTED
+   X-Ms-Ratelimit-Remaining-Subscription-Global-Reads: REDACTED
+   X-Ms-Ratelimit-Remaining-Subscription-Reads: REDACTED
+   X-Ms-Request-Id: 808795f3-d8d3-4ffd-b2b1-7aea16e57490
+   X-Ms-Routing-Request-Id: REDACTED
+   X-Msedge-Ref: REDACTED
+
+[2026-07-10T15:48:09-04:00] Retry: response 200
+[2026-07-10T15:48:09-04:00] Retry: exit due to non-retriable status code

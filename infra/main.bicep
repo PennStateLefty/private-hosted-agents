@@ -22,8 +22,8 @@ param location string = 'northcentralus'
 @description('APIM AI gateway name.')
 param aiGatewayName string
 
-@description('User-assigned managed identity resourceId used to call Foundry (landing-zone output).')
-param userAssignedIdentityId string
+@description('Optional user-assigned managed identity resourceId used to call Foundry (landing-zone output). Empty = system-assigned only (this LZ sets USE_UAI=false).')
+param userAssignedIdentityId string = ''
 
 @description('Foundry / Azure OpenAI inference endpoint (landing-zone output).')
 param foundryOpenAiEndpoint string

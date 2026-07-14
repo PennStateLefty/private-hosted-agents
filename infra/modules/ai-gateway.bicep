@@ -27,8 +27,8 @@ param publisherEmail string = 'admin@contoso.com'
 @description('Delegated APIM subnet resourceId for StandardV2 VNet integration (optional).')
 param subnetResourceId string = ''
 
-@description('User-assigned managed identity resourceId used to call Foundry.')
-param userAssignedIdentityId string
+@description('Optional user-assigned managed identity resourceId used to call Foundry. Empty = system-assigned only (landing zone here sets USE_UAI=false).')
+param userAssignedIdentityId string = ''
 
 @description('Foundry / Azure OpenAI inference endpoint, e.g. https://<account>.openai.azure.com/.')
 param foundryOpenAiEndpoint string
@@ -53,9 +53,10 @@ module apim 'br/public:avm/res/api-management/service:0.9.1' = {
     sku: 'StandardV2'
     skuCapacity: 1
     subnetResourceId: empty(subnetResourceId) ? null : subnetResourceId
+    virtualNetworkType: empty(subnetResourceId) ? 'None' : 'External'
     managedIdentities: {
       systemAssigned: true
-      userAssignedResourceIds: [
+      userAssignedResourceIds: empty(userAssignedIdentityId) ? [] : [
         userAssignedIdentityId
       ]
     }
