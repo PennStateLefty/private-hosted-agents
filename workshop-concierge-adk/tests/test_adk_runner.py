@@ -45,3 +45,18 @@ async def test_empty_input_raises_explicit_error():
     runner = ConciergeRunner(model=FakeLlm(model="fake"))
     with pytest.raises(ValueError):
         await runner.run_turn("conv-3", "   ")
+
+
+async def test_get_recommendation_surfaces_tool_result_from_state():
+    runner = ConciergeRunner(model=FakeLlm(model="fake"))
+    # No turn yet → nothing to surface.
+    assert await runner.get_recommendation("conv-4") is None
+
+    await runner.run_turn("conv-4", "I'm a Developer and I want to Build an agent")
+    rec = await runner.get_recommendation("conv-4")
+    assert rec is not None
+    assert rec["recommendation"]["track_id"] == "build"
+    # First recommendation → the single alternative is still offerable.
+    assert rec["allow_alternative"] is True
+    # Unknown conversation stays None.
+    assert await runner.get_recommendation("no-such-conv") is None

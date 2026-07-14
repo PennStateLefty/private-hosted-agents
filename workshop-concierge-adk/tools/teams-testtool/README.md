@@ -97,6 +97,39 @@ curl -s -X POST http://localhost:3978/api/proactive \
 The message appears in the Playground chat without you sending anything. Omit `text` to
 proactively push the intake card instead.
 
+### Trigger the agent to proactively open a chat
+
+`POST /api/proactive` lets the **agent initiate** a chat with the user with no inbound
+message. Use the `trigger-proactive.sh` helper (or curl it directly):
+
+```bash
+# Default opener (agent greeting in agent mode / intake card in dispatch mode):
+./trigger-proactive.sh
+
+# Send literal text:
+./trigger-proactive.sh "👋 checking in — ready to pick a track?"
+
+# Agent mode: have the REAL agent author the opener (and push the recommendation card):
+PROMPT="I'm a developer who wants to build an agent — recommend a track" ./trigger-proactive.sh
+```
+
+By default this reuses the most recent conversation the host has seen. To open a chat the
+user **hasn't messaged yet** (a true cold start), pass the connector coordinates so the
+host can address the conversation without any prior inbound activity:
+
+```bash
+CONVERSATION_ID=my-conv SERVICE_URL=http://localhost:56150 ./trigger-proactive.sh "hello!"
+```
+
+`/api/proactive` body fields (all optional): `conversationId`, `serviceUrl`, `userId`,
+`botId`, `channelId` (cold-start addressing); `prompt` (agent-authored opener, agent mode
+only); `text` (literal message). See `host.py:handle_proactive` for the full contract.
+
+> **Note:** the Playground creates a conversation client-side when you open the chat, so
+> a message pushed to a conversation the browser hasn't opened won't render there. The
+> cold-start path is primarily for headless/CI drivers (e.g. the fake connector in
+> `tests/test_testtool_host_agent.py`) that own the connector endpoint.
+
 ### Headless smoke test (no browser)
 
 The Playground's card rendering is verified visually in the browser, but the **bot side**
@@ -165,8 +198,10 @@ cd workshop-concierge-adk/tools/teams-testtool
 
 In agent mode the bot **proactively greets** on conversation open (text, agent
 initiates), then each message you type is answered by the **real agent in narrated
-text** (not an Adaptive Card — the ADK agent returns prose). Watch Terminal 1 for the
-spans.
+text**. When the agent recommends a track (its `recommend_track` tool fires), it also
+**pushes the shared recommendation Adaptive Card** alongside that text — so the agent
+speaks the Activity Protocol with a real card, not just prose (the same card the
+deterministic dispatch flow renders). Watch Terminal 1 for the spans.
 
 **Headless check (no browser):**
 
@@ -195,6 +230,7 @@ one used for real publishing; no separate manifest is needed here.
 | `run-bot.sh` | Start the host on `:3978` in **dispatch** mode (deterministic cards, no Azure). |
 | `run-bot-agent.sh` | Start the host on `:3978` in **agent** mode (real ADK agent + Foundry model + console telemetry; needs `.venv-agent` + VPN). |
 | `run-testtool.sh` | Start the Agents Playground pointed at the host (same for both modes). |
+| `trigger-proactive.sh` | Trigger an agent-initiated proactive open via `POST /api/proactive` (text, agent-authored `prompt`, or a cold-start reference). |
 | `smoke.py` | Headless round-trip check of **dispatch** mode against a running host. |
 | `smoke_agent.py` | Headless check of **agent** mode (proactive greeting + one real agent turn). |
 | `agent_bridge.py` | Lazy bridge to `ConciergeRunner`; wraps each turn in a `teams.turn` span. |

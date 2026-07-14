@@ -4,9 +4,10 @@
 Drives what the Agents Playground would drive through a browser, but headless: stands up
 a throwaway fake Bot Framework connector, opens a conversation (expects the agent's
 proactive greeting), then sends a real user message and expects a **text** reply produced
-by the actual agent (not an Adaptive Card). Because agent mode calls the deployed Foundry
-model, this requires the host to be started via ``run-bot-agent.sh`` (py3.13 venv + VPN +
-model RBAC).
+by the actual agent — and, when the agent recommends a track, the shared recommendation
+**Adaptive Card** riding alongside that text. Because agent mode calls the deployed
+Foundry model, this requires the host to be started via ``run-bot-agent.sh`` (py3.13 venv
++ VPN + model RBAC).
 
 Usage (with ./run-bot-agent.sh already running in another terminal):
 
@@ -70,7 +71,8 @@ async def _run() -> int:
             assert "attachments" not in greeting, "agent mode should reply with text, not a card"
             print(f"✓ agent proactive greeting: {greeting['text'][:80]!r}")
 
-            # 2) real user turn -> real agent + Foundry model -> narrated text reply
+            # 2) real user turn -> real agent + Foundry model -> narrated text reply,
+            #    plus the recommendation Adaptive Card when the agent recommends a track.
             #    (this is the call that emits the teams.turn + tool spans in the bot terminal)
             await s.post(f"{BOT}/api/messages", json=base({
                 "type": "message", "id": "a2", "text": PROMPT,
@@ -87,6 +89,13 @@ async def _run() -> int:
             assert text.strip(), "agent reply text was empty"
             assert not text.startswith("(agent error:"), f"agent errored: {text}"
             corr = (reply.get("channelData") or {}).get("correlationId")
+            atts = reply.get("attachments") or []
+            if atts:
+                card = atts[0]["content"]
+                assert card.get("type") == "AdaptiveCard", "attachment was not an Adaptive Card"
+                print(f"✓ agent pushed recommendation Adaptive Card ({card['body'][1]['text']!r})")
+            else:
+                print("• agent replied with text only (no track recommended this turn)")
             print(f"✓ agent reply (correlation={corr}):\n---\n{text}\n---")
 
         print(f"\nPASS — {len(received)} activities delivered; real agent turn completed.")

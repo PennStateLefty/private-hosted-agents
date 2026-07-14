@@ -16,9 +16,26 @@ from __future__ import annotations
 
 import os
 import uuid
+from dataclasses import dataclass
 from typing import Any, Optional
 
 _runner: Any = None
+
+
+@dataclass
+class AgentTurn:
+    """Result of one real agent turn.
+
+    ``text`` is the agent's narrated reply. ``recommendation`` is set **only when the
+    ``recommend_track`` tool produced (or changed) a recommendation during this turn**,
+    so the host can attach the shared recommendation Adaptive Card exactly once — the
+    same card the deterministic dispatch flow sends — over the Activity Protocol.
+    ``allow_alternative`` mirrors the bounded "show one alternative" rule.
+    """
+
+    text: str
+    recommendation: Optional[dict] = None
+    allow_alternative: bool = True
 
 
 def _build_model() -> Any:
@@ -46,12 +63,14 @@ def get_runner() -> Any:
 
 async def run_agent_turn(
     conversation_id: Optional[str], text: str, correlation_id: Optional[str]
-) -> str:
+) -> AgentTurn:
     """Run one real agent turn, wrapped in a ``teams.turn`` span.
 
-    Returns the agent's final assistant text. The span carries the conversation id,
-    correlation id, and input/output sizes so the console trace lines up with the
-    tool spans ``agent.py`` records inside the same turn.
+    Returns an :class:`AgentTurn` carrying the agent's final assistant text and, when
+    the ``recommend_track`` tool produced a *new* recommendation this turn, that
+    recommendation so the host can push the recommendation Adaptive Card. The span
+    carries the conversation id, correlation id, and input/output sizes so the console
+    trace lines up with the tool spans ``agent.py`` records inside the same turn.
     """
     import telemetry
 
@@ -61,9 +80,22 @@ async def run_agent_turn(
         span.set_attribute("workshop.correlation_id", correlation_id or "")
         span.set_attribute("teams.input_chars", len(text or ""))
         runner = get_runner()
+        # Snapshot the recommendation before/after so we only surface (and card) a
+        # recommendation the model actually produced or changed on this turn — not one
+        # left in session state from an earlier turn.
+        before = await runner.get_recommendation(conversation_id)
         reply = await runner.run_turn(conversation_id, text, correlation_id)
+        after = await runner.get_recommendation(conversation_id)
         span.set_attribute("teams.output_chars", len(reply or ""))
-        return reply
+
+        turn = AgentTurn(text=reply)
+        if after is not None and after != before:
+            turn.recommendation = after["recommendation"]
+            turn.allow_alternative = bool(after["allow_alternative"])
+            span.set_attribute(
+                "teams.card", turn.recommendation.get("track_id", "")
+            )
+        return turn
 
 
 def new_correlation_id() -> str:

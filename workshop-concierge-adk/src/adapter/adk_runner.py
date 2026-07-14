@@ -76,3 +76,28 @@ class ConciergeRunner:
                 parts = event.content.parts or []
                 final_text = "".join(p.text or "" for p in parts if getattr(p, "text", None))
         return final_text
+
+    async def get_recommendation(
+        self, conversation_id: Optional[str]
+    ) -> Optional[dict]:
+        """Return the recommendation the ``recommend_track`` tool wrote into session
+        state, or ``None`` if the agent hasn't recommended a track yet.
+
+        Shape: ``{"recommendation": <recommend_track dict>, "allow_alternative": bool}``.
+        ``allow_alternative`` is False once the single bounded alternative has been
+        shown (``alternative_count`` > 0), matching the deterministic card flow. Lets
+        a caller render the shared recommendation Adaptive Card for the agent's turn.
+        """
+        session_id = conversation_id or "default-session"
+        session = await _maybe_await(
+            self.session_service.get_session(
+                app_name=self.app_name, user_id=self.user_id, session_id=session_id
+            )
+        )
+        if session is None:
+            return None
+        rec = session.state.get("recommendation")
+        if not isinstance(rec, dict):
+            return None
+        alt_count = int(session.state.get("alternative_count", 0) or 0)
+        return {"recommendation": dict(rec), "allow_alternative": alt_count == 0}

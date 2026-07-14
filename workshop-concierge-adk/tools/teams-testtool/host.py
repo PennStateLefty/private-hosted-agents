@@ -42,6 +42,13 @@ LOG = logging.getLogger("teams-testtool-host")
 MESSAGES_PATH = "/api/messages"
 DEFAULT_PORT = 3978
 
+ADAPTIVE_CARD_CONTENT_TYPE = "application/vnd.microsoft.card.adaptive"
+
+
+def _card_attachment(card: dict) -> dict:
+    """Wrap an Adaptive Card dict as a Bot Framework attachment."""
+    return {"contentType": ADAPTIVE_CARD_CONTENT_TYPE, "content": card}
+
 # ---------------------------------------------------------------------------
 # Host mode
 # ---------------------------------------------------------------------------
@@ -201,43 +208,103 @@ async def _agent_outbound(activity: dict, conv_id: Optional[str]) -> Optional[di
     key = conv_id or "default"
     corr = _CORR.setdefault(key, agent_bridge.new_correlation_id())
     try:
-        reply = await agent_bridge.run_agent_turn(conv_id, text, corr)
+        turn = await agent_bridge.run_agent_turn(conv_id, text, corr)
     except Exception as exc:  # noqa: BLE001 - surface agent/model failures to the tool UI
         LOG.exception("agent turn failed")
-        reply = f"(agent error: {exc})"
-    return {
+        return {
+            "type": "message",
+            "text": f"(agent error: {exc})",
+            "channelData": {"correlationId": corr},
+        }
+    outbound: dict[str, Any] = {
         "type": "message",
-        "text": reply or "(no response)",
+        "text": turn.text or "(no response)",
         "channelData": {"correlationId": corr},
+    }
+    # When the agent produced a recommendation this turn, push the shared recommendation
+    # Adaptive Card alongside the narrated text — the agent "speaks" the Activity Protocol
+    # with a real card, not just prose. Same card builder the deterministic dispatch uses.
+    if turn.recommendation:
+        from workshop_concierge import cards  # noqa: PLC0415 — cards is py3.14-safe
+
+        card = cards.recommendation_card(
+            turn.recommendation, corr, allow_alternative=turn.allow_alternative
+        )
+        outbound["attachments"] = [_card_attachment(card)]
+    return outbound
+
+
+def _reference_from_body(payload: dict) -> Optional[dict[str, Any]]:
+    """Build a conversation reference from an explicit proactive request body.
+
+    Enables a **cold** proactive open — the agent initiating a chat with a user who
+    hasn't messaged first — by letting the caller supply the connector coordinates:
+    ``serviceUrl`` + ``conversationId`` (required), plus optional ``userId`` / ``botId``.
+    Returns ``None`` when the two required fields are absent, so callers can fall back
+    to a cached reference.
+    """
+    service_url = (payload or {}).get("serviceUrl")
+    conv_id = (payload or {}).get("conversationId")
+    if not service_url or not conv_id:
+        return None
+    return {
+        "serviceUrl": service_url,
+        "channelId": (payload or {}).get("channelId", "emulator"),
+        "conversation": {"id": conv_id},
+        "bot": {"id": (payload or {}).get("botId", "workshop-concierge"),
+                "name": "Workshop Concierge"},
+        "user": {"id": (payload or {}).get("userId", "user-1")},
+        "replyToId": None,
     }
 
 
 async def handle_proactive(request: web.Request) -> web.Response:
-    """``POST /api/proactive`` — prove a *real* proactive message works.
+    """``POST /api/proactive`` — trigger the agent to proactively open/continue a chat.
 
-    Sends the intake card (or a supplied text) to a known conversation without any
-    inbound trigger, using the stored conversation reference. Body (all optional):
-    ``{"conversationId": "...", "text": "..."}``. With no conversationId the most
-    recent conversation is used.
+    Sends a message to a conversation **with no inbound trigger**. Body (all optional):
+
+    * ``conversationId`` — target a specific conversation; omit to use the most recent.
+    * ``serviceUrl`` (+ ``conversationId``, optional ``userId``/``botId``/``channelId``)
+      — cold start: address a conversation the user hasn't opened yet, without any
+      prior inbound activity (see ``trigger-proactive.sh``).
+    * ``prompt`` — in **agent mode**, run the real ADK agent to author the opener (and
+      push the recommendation card if it recommends a track). Ignored in dispatch mode.
+    * ``text`` — send this literal text instead of the default opener.
+
+    With none of the above, agent mode proactively greets and dispatch mode pushes the
+    intake Adaptive Card.
     """
     try:
         payload = await request.json()
     except Exception:  # noqa: BLE001
         payload = {}
+    payload = payload or {}
 
-    conv_id = (payload or {}).get("conversationId")
-    ref = _REFERENCES.get(conv_id) if conv_id else (
-        next(reversed(_REFERENCES.values())) if _REFERENCES else None
-    )
+    conv_id = payload.get("conversationId")
+    # Prefer a cached reference; else build one from the body (cold start); else the
+    # most recent conversation the host has seen.
+    ref = _REFERENCES.get(conv_id) if conv_id else None
+    if ref is None:
+        ref = _reference_from_body(payload)
+    if ref is None:
+        ref = next(reversed(_REFERENCES.values())) if _REFERENCES else None
     if not ref:
         return web.json_response(
-            {"error": "no known conversation yet — open the chat in the Test Tool first"},
+            {"error": "no known conversation — open the chat in the Test Tool first, "
+                      "or pass serviceUrl + conversationId for a cold proactive open"},
             status=409,
         )
 
-    text = (payload or {}).get("text")
+    text = payload.get("text")
+    prompt = payload.get("prompt")
     if text:
         outbound = {"type": "message", "text": text}
+    elif prompt and _AGENT_MODE:
+        # Let the real agent author the proactive opener (and card) for this prompt.
+        outbound = await _agent_outbound(
+            {"type": "message", "text": prompt, "conversation": ref.get("conversation") or {}},
+            (ref.get("conversation") or {}).get("id"),
+        ) or {"type": "message", "text": AGENT_GREETING}
     elif _AGENT_MODE:
         # Agent mode has no card state machine — proactively initiate with the greeting.
         outbound = {"type": "message", "text": AGENT_GREETING}
