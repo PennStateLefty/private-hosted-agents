@@ -40,11 +40,68 @@ in a headless shell the Playground exits after startup because it cannot open a 
 
 ## Regression
 
-`pytest` (offline subset) = **85 passed** — the pre-existing 79 plus the 6 new host tests.
-The `test_adapter_contract.py`, `test_adk_runner.py`, `test_agent.py` modules only fail at
-*collection* because `google-adk` / `litellm==1.91.1` (Requires-Python `<3.14`) cannot
-install on this machine's Python 3.14.6 — a pre-existing environment constraint, unrelated
-to this change and unaffected by it.
+`pytest` (offline subset) = **87 passed** — the pre-existing 79, the 6 host tests, plus 2
+new offline agent-mode tests (greeting / empty-message paths of `_agent_outbound`, which
+don't need google-adk). The `test_adapter_contract.py`, `test_adk_runner.py`,
+`test_agent.py` modules only fail at *collection* because `google-adk` /
+`litellm==1.91.1` (Requires-Python `<3.14`) cannot install on this machine's Python
+3.14.6 — a pre-existing environment constraint, unrelated to this change and unaffected
+by it.
+
+## Agent mode — real ADK agent + deployed Foundry model + telemetry (2026-07-14)
+
+`WC_HOST_MODE=agent` drives the **actual** `src/workshop_concierge/agent.py` ADK agent
+locally (py3.13 `.venv-agent`) and calls the model **already deployed in Foundry**
+(`AZURE_OPENAI_ENDPOINT=…aif-zliorc-pha-dev-ncus-001…`, deployment `chat`) over the P2S
+VPN via `DefaultAzureCredential`. A console OpenTelemetry exporter (`telemetry.py`) prints
+the spans; each turn is wrapped in a `teams.turn` span (`agent_bridge.py`).
+
+**Live headless run — `tools/teams-testtool/smoke_agent.py` (PASS)** against
+`./run-bot-agent.sh`:
+
+```
+✓ agent proactive greeting: "👋 Hi, I'm the Workshop Concierge. Tell me about your goals…"
+✓ agent reply (correlation=wc-50317fa1c9d1):
+---
+Take the **Build Track — ADK to Responses on Foundry Hosted Agents**.
+It fits a **developer** whose primary goal is to **build an agent**.
+If you want, I can also share the single alternative track.
+---
+PASS — 2 activities delivered; real agent turn completed.
+```
+
+That reply text was produced by the live Foundry model (not the deterministic dispatch
+path). The console spans emitted for the turn, in order:
+
+```
+execute_tool recommend_track
+generate_content azure/chat
+call_llm
+generate_content azure/chat
+call_llm
+invoke_agent workshop_concierge
+invocation
+teams.turn
+```
+
+i.e. `invocation → invoke_agent → call_llm (decide) → execute_tool recommend_track →
+call_llm (narrate)`, all inside our `teams.turn`. Key attributes captured on the spans:
+
+```json
+// execute_tool recommend_track
+"workshop.tool.name": "recommend_track",
+"workshop.recommended_track": "build",
+"workshop.correlation_id": "wc-50317fa1c9d1",
+"gcp.vertex.agent.tool_call_args": "{\"role\": \"Developer\", \"goal\": \"Build an agent\"}"
+// teams.turn
+"teams.conversation_id": "smoke-agent-1", "teams.input_chars": 102, "teams.output_chars": 201
+```
+
+This proves the real agent orchestrates the response and the tool spans `agent.py`
+emits (`workshop.*`) surface locally — the same signals the Foundry Hosted Agent runtime
+would export in production. Agent mode is import-isolated (lazy) so dispatch mode still
+imports on Python 3.14; `host.py` verified importable under both the 3.14 `.venv`
+(dispatch) and the 3.13 `.venv-agent` (agent).
 
 ## Isolation
 

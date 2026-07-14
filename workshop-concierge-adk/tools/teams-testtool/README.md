@@ -117,6 +117,70 @@ CI or a quick check on Python 3.14 where the Playground's browser UI isn't avail
 > prints `Listening on 56150`, then exits because it cannot open a browser — use
 > `smoke.py` there instead.
 
+## Agent mode — run the REAL agent + deployed Foundry model, with telemetry
+
+Everything above is **dispatch mode**: the host reuses the deterministic
+`teams_dispatch` card state machine — no LLM, no network, importable on Python 3.14.
+That proves the *Teams plumbing* (cards, proactive, correlation) but does **not** run
+the actual agent.
+
+**Agent mode** (`WC_HOST_MODE=agent`) instead drives the real Google ADK agent
+(`src/workshop_concierge/agent.py`) locally and calls the model **already deployed in
+Foundry** (Azure OpenAI `chat` / gpt-5.4-mini). Every turn is wrapped in a `teams.turn`
+span and an OpenTelemetry **console exporter** prints the agent's spans to the terminal,
+so you can watch it orchestrate: `invoke_agent → call_llm → execute_tool recommend_track
+→ call_llm`. The Teams sim, bot host, and agent all run locally — only the model call
+leaves the machine.
+
+```
+Agents Playground → host.py (WC_HOST_MODE=agent) → agent_bridge → ConciergeRunner
+                                                        → real ADK agent → Foundry model
+   console spans:  teams.turn ⊃ invoke_agent ⊃ call_llm / execute_tool recommend_track
+```
+
+**Prerequisites** (unlike dispatch mode, agent mode needs Azure):
+
+- **Python 3.13** venv at `../../.venv-agent` (google-adk / litellm do **not** install on
+  3.14). Create it once:
+  ```bash
+  /opt/homebrew/bin/python3.13 -m venv ../../.venv-agent
+  ../../.venv-agent/bin/pip install -r requirements-agent.txt
+  ```
+- **VPN up** + `az login`, with **`Cognitive Services OpenAI User`** on the Foundry
+  account (the agent authenticates via `DefaultAzureCredential`).
+- Foundry endpoint/deployment values — auto-sourced from the main checkout's azd env
+  (`.azure/wc-dev/.env`); override with `WC_AZURE_ENV_FILE` or pre-export
+  `AZURE_OPENAI_ENDPOINT` / `MODEL_DEPLOYMENT_NAME` / `AZURE_OPENAI_API_VERSION`.
+
+**Run it (2 terminals):**
+
+```bash
+# Terminal 1 — real agent + Foundry model + console telemetry:
+cd workshop-concierge-adk/tools/teams-testtool
+./run-bot-agent.sh
+
+# Terminal 2 — the same Agents Playground (talks to :3978 either way):
+./run-testtool.sh
+```
+
+In agent mode the bot **proactively greets** on conversation open (text, agent
+initiates), then each message you type is answered by the **real agent in narrated
+text** (not an Adaptive Card — the ADK agent returns prose). Watch Terminal 1 for the
+spans.
+
+**Headless check (no browser):**
+
+```bash
+cd workshop-concierge-adk && .venv/bin/python tools/teams-testtool/smoke_agent.py
+```
+
+`smoke_agent.py` drives a proactive greeting + one real user turn and asserts a non-empty
+text reply came back; the spans print in the Terminal‑1 (bot) window.
+
+> **Offline wiring check:** set `WC_MODEL=stub` to build the agent object and prove the
+> telemetry wiring without a model call (no VPN needed). A real recommendation still
+> requires the live Foundry model.
+
 ## Manifest
 
 The Playground does not process the app manifest, but the repo's
@@ -127,8 +191,13 @@ one used for real publishing; no separate manifest is needed here.
 
 | File | Purpose |
 | --- | --- |
-| `host.py` | aiohttp local connector host; reuses `handle_activity`. |
-| `run-bot.sh` | Start the host on `:3978`. |
-| `run-testtool.sh` | Start the Agents Playground pointed at the host. |
-| `smoke.py` | Headless round-trip check against a running host (no browser). |
-| `requirements.txt` | Test-only deps (`aiohttp`). Mirrors the `testtool` extra in `pyproject.toml`. |
+| `host.py` | aiohttp local connector host; reuses `handle_activity` (dispatch) or drives the real agent (agent mode). |
+| `run-bot.sh` | Start the host on `:3978` in **dispatch** mode (deterministic cards, no Azure). |
+| `run-bot-agent.sh` | Start the host on `:3978` in **agent** mode (real ADK agent + Foundry model + console telemetry; needs `.venv-agent` + VPN). |
+| `run-testtool.sh` | Start the Agents Playground pointed at the host (same for both modes). |
+| `smoke.py` | Headless round-trip check of **dispatch** mode against a running host. |
+| `smoke_agent.py` | Headless check of **agent** mode (proactive greeting + one real agent turn). |
+| `agent_bridge.py` | Lazy bridge to `ConciergeRunner`; wraps each turn in a `teams.turn` span. |
+| `telemetry.py` | Idempotent console OpenTelemetry exporter for agent mode. |
+| `requirements.txt` | Dispatch-mode deps (`aiohttp`). Mirrors the `testtool` extra in `pyproject.toml`. |
+| `requirements-agent.txt` | Agent-mode deps (google-adk / litellm / azure-identity / opentelemetry) for the py3.13 `.venv-agent`. |

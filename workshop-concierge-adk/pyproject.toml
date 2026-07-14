@@ -22,6 +22,12 @@ dev = ["pytest>=8", "pytest-asyncio>=1.0", "httpx"]
 # Local, test-only Teams App Test Tool host (tools/teams-testtool/). NOT a runtime
 # dependency — the deployed agent has no custom bot host (see KNOWN-ISSUES.md #1).
 testtool = ["aiohttp>=3.9"]
+# Agent mode of the test tool (tools/teams-testtool/run-bot-agent.sh) runs the REAL
+# agent locally with telemetry. It reuses the runtime stack (google-adk / litellm /
+# azure-identity / opentelemetry, pinned above in [project.dependencies]) plus these.
+# Installed into a Python 3.13 .venv-agent via requirements-agent.txt (google-adk needs
+# Python <3.14). Still NOT a deployed dependency.
+agent-testtool = ["aiohttp>=3.9", "pyyaml>=6.0"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

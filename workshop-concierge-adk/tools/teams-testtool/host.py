@@ -42,6 +42,28 @@ LOG = logging.getLogger("teams-testtool-host")
 MESSAGES_PATH = "/api/messages"
 DEFAULT_PORT = 3978
 
+# ---------------------------------------------------------------------------
+# Host mode
+# ---------------------------------------------------------------------------
+# ``dispatch`` (default): reuse the deterministic ``bot.messaging.handle_activity``
+#   card state machine — no LLM, importable on Python 3.14.
+# ``agent``: drive the REAL ADK ``LlmAgent`` against the Foundry model via
+#   ``agent_bridge`` and emit OpenTelemetry spans (see ``run-bot-agent.sh``). Requires
+#   the Python 3.13 ``.venv-agent`` + VPN + model RBAC. Heavy imports stay lazy so this
+#   file still imports in dispatch mode on 3.14.
+_AGENT_MODE = os.environ.get("WC_HOST_MODE", "dispatch").strip().lower() == "agent"
+
+# Text the agent proactively opens with on conversation open (agent *initiates*). Kept
+# deterministic so opening a chat costs no model call; the first user message is what
+# exercises the real agent + telemetry.
+AGENT_GREETING = (
+    "👋 Hi, I'm the Workshop Concierge. Tell me about your goals or background and I'll "
+    "recommend a workshop track for you."
+)
+
+# Correlation id per conversation, so tool spans + the turn span share an id in agent mode.
+_CORR: dict[str, str] = {}
+
 # Typed application key for the shared aiohttp client (aiohttp best practice).
 CLIENT_KEY: "web.AppKey[ClientSession]" = web.AppKey("client", ClientSession)
 
@@ -135,6 +157,15 @@ async def handle_messages(request: web.Request) -> web.Response:
         # e.g. the bot's own conversationUpdate join — acknowledge with no reply.
         return web.Response(status=200)
 
+    if _AGENT_MODE:
+        outbound = await _agent_outbound(activity, conv_id)
+        if outbound is None:
+            return web.Response(status=200)
+        envelope = _envelope(outbound, ref)
+        session: ClientSession = request.app[CLIENT_KEY]
+        await _send_to_connector(session, ref, envelope)
+        return web.Response(status=200)
+
     try:
         outbound = handle_activity(activity, _STORE)
     except ValueError as exc:
@@ -144,6 +175,41 @@ async def handle_messages(request: web.Request) -> web.Response:
     session: ClientSession = request.app[CLIENT_KEY]
     await _send_to_connector(session, ref, envelope)
     return web.Response(status=200)
+
+
+async def _agent_outbound(activity: dict, conv_id: Optional[str]) -> Optional[dict]:
+    """Agent-mode outbound: drive the REAL ADK agent (or greet on conversation open).
+
+    Returns a minimal outbound Activity dict, or ``None`` when there's nothing to say
+    (e.g. an empty message). Heavy deps are imported lazily here so dispatch mode never
+    pays for them.
+    """
+    if activity.get("type") == "conversationUpdate":
+        return {"type": "message", "text": AGENT_GREETING}
+
+    text = activity.get("text") or ""
+    if not text.strip():
+        value = activity.get("value")
+        text = str(value) if value else ""
+    if not text.strip():
+        return None
+
+    # Import the heavy agent stack only when we actually run a turn, so the greeting /
+    # empty-message paths (and their unit tests) don't need google-adk / py3.13.
+    import agent_bridge  # noqa: PLC0415 — lazy: deps live under .venv-agent (py3.13)
+
+    key = conv_id or "default"
+    corr = _CORR.setdefault(key, agent_bridge.new_correlation_id())
+    try:
+        reply = await agent_bridge.run_agent_turn(conv_id, text, corr)
+    except Exception as exc:  # noqa: BLE001 - surface agent/model failures to the tool UI
+        LOG.exception("agent turn failed")
+        reply = f"(agent error: {exc})"
+    return {
+        "type": "message",
+        "text": reply or "(no response)",
+        "channelData": {"correlationId": corr},
+    }
 
 
 async def handle_proactive(request: web.Request) -> web.Response:
@@ -172,6 +238,9 @@ async def handle_proactive(request: web.Request) -> web.Response:
     text = (payload or {}).get("text")
     if text:
         outbound = {"type": "message", "text": text}
+    elif _AGENT_MODE:
+        # Agent mode has no card state machine — proactively initiate with the greeting.
+        outbound = {"type": "message", "text": AGENT_GREETING}
     else:
         # Reuse the exact intake card the deployed bot would proactively send by
         # replaying a synthetic conversationUpdate through handle_activity.
@@ -216,8 +285,19 @@ def main() -> None:
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    if _AGENT_MODE and os.environ.get("WC_TELEMETRY", "console").strip().lower() != "off":
+        # Install the console span exporter BEFORE the first turn so agent + tool spans
+        # print to this terminal. Lazy import keeps dispatch mode dependency-light.
+        import telemetry
+
+        telemetry.setup_console_tracing()
+        LOG.info("console OpenTelemetry enabled (spans print below during each turn)")
     port = int(os.environ.get("BOT_PORT") or os.environ.get("PORT") or DEFAULT_PORT)
-    LOG.info("Workshop Concierge Teams Test Tool host on :%d%s (LOCAL TEST ONLY)", port, MESSAGES_PATH)
+    mode = "AGENT (real ADK + Foundry)" if _AGENT_MODE else "dispatch (deterministic cards)"
+    LOG.info(
+        "Workshop Concierge Teams Test Tool host on :%d%s — mode=%s (LOCAL TEST ONLY)",
+        port, MESSAGES_PATH, mode,
+    )
     web.run_app(create_app(), host="localhost", port=port)
 
 

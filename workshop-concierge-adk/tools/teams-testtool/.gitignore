@@ -2,3 +2,5 @@
 devTools/
 *.log
 .venv/
+.venv-agent/
+env.agent.local

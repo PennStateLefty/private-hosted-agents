@@ -207,3 +207,21 @@ async def test_health_endpoint():
         assert (await resp.json())["status"] == "ok"
     finally:
         await client.close()
+
+# --- Agent mode (offline paths that don't need google-adk / the model) -------
+# _agent_outbound imports agent_bridge lazily, only when it actually runs a turn, so the
+# greeting and empty-message branches are exercisable on Python 3.14 without the ADK stack.
+
+async def test_agent_mode_conversationupdate_greets_without_adk():
+    activity = {"type": "conversationUpdate", "conversation": {"id": "c1"}}
+    out = await host._agent_outbound(activity, "c1")
+    assert out is not None
+    assert out["type"] == "message"
+    assert out["text"] == host.AGENT_GREETING
+    assert "attachments" not in out  # agent mode replies with text, not a card
+
+
+async def test_agent_mode_empty_message_returns_none_without_adk():
+    activity = {"type": "message", "text": "   ", "conversation": {"id": "c1"}}
+    out = await host._agent_outbound(activity, "c1")
+    assert out is None
