@@ -1,0 +1,22 @@
+G3 public-ingress chain proof — 2026-07-12T19:43:47Z
+Path: public DNS(teams-bot.gutherie-demos.com) -> AGW public IP -> TLS(LetsEncrypt) -> WAF -> host-override -> Foundry private endpoint -> Foundry auth
+Endpoint: https://teams-bot.gutherie-demos.com/api/projects/aifp-zliorc-pha-dev-ncus-001/agents/workshop-concierge/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview
+
+== TLS certificate served (via curl) ==
+ subject: CN=teams-bot.gutherie-demos.com
+ expire date: Oct 10 18:22:10 2026 GMT
+ issuer: C=US; O=Let's Encrypt; CN=YR1
+ SSL certificate verify ok.
+
+== AGW backend health ==
+aif-zliorc-pha-dev-ncus-001.services.ai.azure.com	Healthy
+
+== 3 consecutive unauthenticated POSTs (expect deterministic 401 from Foundry via AGW public IP) ==
+  round 1: http_code=401 remote_ip=135.232.215.129 ssl_verify=0  [PASS]
+    foundry-body: {"error":{"code":"401","message":"Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for 
+  round 2: http_code=401 remote_ip=135.232.215.129 ssl_verify=0  [PASS]
+    foundry-body: {"error":{"code":"401","message":"Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for 
+  round 3: http_code=401 remote_ip=135.232.215.129 ssl_verify=0  [PASS]
+    foundry-body: {"error":{"code":"401","message":"Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for 
+
+RESULT: ingress chain proven 3/3 consecutive

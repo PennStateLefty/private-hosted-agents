@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: workshop-concierge-adk
+metadata:
+    template: workshop-concierge-adk@0.1.0
+services:
+    aifp-zliorc-pha-dev-ncus-001:
+        project: ""
+        host: azure.ai.project
+        language: ""
+        endpoint: ${FOUNDRY_PROJECT_ENDPOINT}
+    workshop-concierge:
+        project: agent
+        host: azure.ai.agent
+        language: docker
+        image: crzliorcphadevncus001.azurecr.io/agents/workshop-concierge:v1
+        uses:
+            - aifp-zliorc-pha-dev-ncus-001
+        container:
+            resources:
+                cpu: "0.5"
+                memory: 1Gi
+        description: Deterministic ADK workshop-track concierge on the Responses protocol.
+        displayName: Workshop Concierge
+        environmentVariables:
+            - name: MODEL_DEPLOYMENT_NAME
+              value: ${MODEL_DEPLOYMENT_NAME}
+            - name: AZURE_OPENAI_ENDPOINT
+              value: ${AZURE_OPENAI_ENDPOINT}
+            - name: AZURE_OPENAI_API_VERSION
+              value: ${AZURE_OPENAI_API_VERSION}
+        kind: hosted
+        name: workshop-concierge
+        protocols:
+            - protocol: responses
+              version: 2.0.0
+infra:
+    provider: microsoft.foundry

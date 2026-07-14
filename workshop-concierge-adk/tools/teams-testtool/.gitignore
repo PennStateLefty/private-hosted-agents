@@ -1,0 +1,4 @@
+# Playground / Test Tool runtime artifacts (local only)
+devTools/
+*.log
+.venv/

@@ -1,0 +1,15 @@
+name: wc-quality
+agent:
+    name: workshop-concierge
+    kind: hosted
+    version: "5"
+dataset:
+    local_uri: /Users/jeremiahgutherie/Development/pennstatelefty-org/private-hosted-agents/workshop-concierge-adk/tests/golden.jsonl
+evaluators:
+    - builtin.intent_resolution
+    - name: wc-quality
+      version: "1"
+      local_uri: evaluators/wc-quality/rubric_dimensions.json
+options:
+    eval_model: chat
+max_samples: 15

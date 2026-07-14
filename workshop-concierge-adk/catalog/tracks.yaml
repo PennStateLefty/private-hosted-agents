@@ -1,0 +1,26 @@
+# Workshop-track catalog — version-controlled, deterministic.
+# The model may EXPLAIN a recommendation, but recommend_track() selects the track
+# from this data so the result is deterministic and evaluable.
+version: 1
+tracks:
+  - id: build
+    title: "Build Track — ADK to Responses on Foundry Hosted Agents"
+    focus: "ADK-to-Responses adaptation and Foundry Hosted Agent deployment"
+    summary: >-
+      Hands-on path for shipping a Google ADK agent as a Foundry Hosted Agent:
+      the Responses protocol adapter, container packaging, private-network model
+      access, and versioned deployment with a stable endpoint.
+  - id: integrate
+    title: "Integrate Track — Teams, Activity Protocol, and Adaptive Cards"
+    focus: "Teams publishing, Activity protocol, and Adaptive Cards"
+    summary: >-
+      Connect a hosted agent to Microsoft Teams over the private-network REST
+      publication flow: Bot Service, the Activity protocol, controlled public
+      ingress, and Adaptive Card request/response with correlation.
+  - id: govern
+    title: "Govern Track — Evaluation, Guardrails, Identity, Observability, APIM"
+    focus: "Evaluation, guardrails, identity, observability, and APIM AI Gateway"
+    summary: >-
+      Trust-and-operations path: Foundry evaluation against a prepared dataset,
+      agent guardrails, Entra agent identity, tracing/Application Insights
+      correlation, and governing model traffic through the APIM AI Gateway.

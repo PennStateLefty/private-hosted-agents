@@ -1,0 +1,370 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.44.1.10279",
+      "templateHash": "6051248027005980106"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Gateway name."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Region — must match the spoke (e.g. northcentralus)."
+      }
+    },
+    "subnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Dedicated App Gateway subnet resourceId (v2 requires its own subnet, /26 or larger). Must be pre-created with the AGW NSG — see scripts/create-appgw-subnet.sh."
+      }
+    },
+    "foundryBackendFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Foundry account FQDN the agent endpoint resolves to, e.g. aif-zliorc-pha-dev-ncus-001.services.ai.azure.com. This is the private-endpoint DNS name; the AGW subnet VNet must be linked to the privatelink.services.ai.azure.com zone so it resolves to the private IP."
+      }
+    },
+    "listenerHostName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Public listener hostname (custom domain) presented to the Bot Channel Adapter, e.g. teams-bot.contoso.com. Leave empty to use the AGW public IP FQDN and a matching cert."
+      }
+    },
+    "sslCertKeyVaultSecretId": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault secret resourceId (unversioned) of the TLS certificate (PFX) for the HTTPS listener. The AGW user-assigned identity needs Key Vault Secrets User on that vault."
+      }
+    },
+    "userAssignedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "User-assigned managed identity resourceId AGW uses to read the TLS cert from Key Vault."
+      }
+    },
+    "publicIpName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-pip', parameters('name'))]",
+      "metadata": {
+        "description": "Public IP name."
+      }
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Shared Log Analytics workspace resourceId for diagnostics."
+      }
+    },
+    "minCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Min/Max autoscale capacity (v2)."
+      }
+    },
+    "maxCapacity": {
+      "type": "int",
+      "defaultValue": 2
+    },
+    "sslPolicyName": {
+      "type": "string",
+      "defaultValue": "AppGwSslPolicy20220101",
+      "metadata": {
+        "description": "Predefined SSL policy pinning a minimum TLS version. AppGwSslPolicy20220101 enforces TLS 1.2+ (MCAPS TLS-hardening control). Default listener TLS otherwise still permits TLS 1.0/1.1."
+      }
+    },
+    "publicIpDnsLabel": {
+      "type": "string",
+      "defaultValue": "[toLower(parameters('name'))]",
+      "metadata": {
+        "description": "DNS label for the AGW public IP (must be globally unique within the region)."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    },
+    "activityProtocolPath": {
+      "type": "string",
+      "metadata": {
+        "description": "Agent activityProtocol path (no host), including api-version."
+      }
+    }
+  },
+  "variables": {
+    "appGwId": "[resourceId('Microsoft.Network/applicationGateways', parameters('name'))]",
+    "frontendPortName": "port443",
+    "feIpConfigName": "appGwPublicFrontendIp",
+    "listenerName": "https-listener",
+    "backendPoolName": "foundry-private-pool",
+    "backendHttpSettingsName": "foundry-https-settings",
+    "probeName": "activityprotocol-probe",
+    "sslCertName": "listener-cert",
+    "routingRuleName": "teams-inbound-rule",
+    "wafPolicyName": "[format('{0}-waf', parameters('name'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('wafPolicyName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "policySettings": {
+          "state": "Enabled",
+          "mode": "Prevention",
+          "requestBodyCheck": true,
+          "maxRequestBodySizeInKb": 128,
+          "fileUploadLimitInMb": 100
+        },
+        "managedRules": {
+          "managedRuleSets": [
+            {
+              "ruleSetType": "OWASP",
+              "ruleSetVersion": "3.2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "publicIPAddressVersion": "IPv4",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('publicIpDnsLabel')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/applicationGateways",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('userAssignedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "sku": {
+          "name": "WAF_v2",
+          "tier": "WAF_v2"
+        },
+        "autoscaleConfiguration": {
+          "minCapacity": "[parameters('minCapacity')]",
+          "maxCapacity": "[parameters('maxCapacity')]"
+        },
+        "firewallPolicy": {
+          "id": "[resourceId('Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies', variables('wafPolicyName'))]"
+        },
+        "sslPolicy": {
+          "policyType": "Predefined",
+          "policyName": "[parameters('sslPolicyName')]"
+        },
+        "sslCertificates": [
+          {
+            "name": "[variables('sslCertName')]",
+            "properties": {
+              "keyVaultSecretId": "[parameters('sslCertKeyVaultSecretId')]"
+            }
+          }
+        ],
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGwIpConfig",
+            "properties": {
+              "subnet": {
+                "id": "[parameters('subnetResourceId')]"
+              }
+            }
+          }
+        ],
+        "frontendIPConfigurations": [
+          {
+            "name": "[variables('feIpConfigName')]",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "[variables('frontendPortName')]",
+            "properties": {
+              "port": 443
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "[variables('backendPoolName')]",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[parameters('foundryBackendFqdn')]"
+                }
+              ]
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "[variables('probeName')]",
+            "properties": {
+              "protocol": "Https",
+              "host": "[parameters('foundryBackendFqdn')]",
+              "path": "[parameters('activityProtocolPath')]",
+              "interval": 30,
+              "timeout": 30,
+              "unhealthyThreshold": 3,
+              "pickHostNameFromBackendHttpSettings": false,
+              "minServers": 0,
+              "match": {
+                "statusCodes": [
+                  "200-499"
+                ]
+              }
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "[variables('backendHttpSettingsName')]",
+            "properties": {
+              "protocol": "Https",
+              "port": 443,
+              "hostName": "[parameters('foundryBackendFqdn')]",
+              "pickHostNameFromBackendAddress": false,
+              "requestTimeout": 60,
+              "probe": {
+                "id": "[format('{0}/probes/{1}', variables('appGwId'), variables('probeName'))]"
+              }
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "[variables('listenerName')]",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[format('{0}/frontendIPConfigurations/{1}', variables('appGwId'), variables('feIpConfigName'))]"
+              },
+              "frontendPort": {
+                "id": "[format('{0}/frontendPorts/{1}', variables('appGwId'), variables('frontendPortName'))]"
+              },
+              "protocol": "Https",
+              "hostName": "[if(empty(parameters('listenerHostName')), null(), parameters('listenerHostName'))]",
+              "requireServerNameIndication": "[if(empty(parameters('listenerHostName')), false(), true())]",
+              "sslCertificate": {
+                "id": "[format('{0}/sslCertificates/{1}', variables('appGwId'), variables('sslCertName'))]"
+              }
+            }
+          }
+        ],
+        "requestRoutingRules": [
+          {
+            "name": "[variables('routingRuleName')]",
+            "properties": {
+              "ruleType": "Basic",
+              "priority": 100,
+              "httpListener": {
+                "id": "[format('{0}/httpListeners/{1}', variables('appGwId'), variables('listenerName'))]"
+              },
+              "backendAddressPool": {
+                "id": "[format('{0}/backendAddressPools/{1}', variables('appGwId'), variables('backendPoolName'))]"
+              },
+              "backendHttpSettings": {
+                "id": "[format('{0}/backendHttpSettingsCollection/{1}', variables('appGwId'), variables('backendHttpSettingsName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]",
+        "[resourceId('Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies', variables('wafPolicyName'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('logAnalyticsWorkspaceId')))]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[resourceId('Microsoft.Network/applicationGateways', parameters('name'))]",
+      "name": "agw-diag",
+      "properties": {
+        "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
+        ],
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/applicationGateways', parameters('name'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "appGatewayId": {
+      "type": "string",
+      "metadata": {
+        "description": "App Gateway resource id."
+      },
+      "value": "[resourceId('Microsoft.Network/applicationGateways', parameters('name'))]"
+    },
+    "publicIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Public IP address of the App Gateway."
+      },
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName')), '2023-11-01').ipAddress]"
+    },
+    "publicIpFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Public FQDN of the App Gateway public IP (use for the bot messaging endpoint if no custom domain)."
+      },
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName')), '2023-11-01').dnsSettings.fqdn]"
+    },
+    "messagingEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "The messaging endpoint to register on the Azure Bot resource = public host + activityProtocol path."
+      },
+      "value": "[format('https://{0}{1}', if(empty(parameters('listenerHostName')), reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName')), '2023-11-01').dnsSettings.fqdn, parameters('listenerHostName')), parameters('activityProtocolPath'))]"
+    }
+  }
+}

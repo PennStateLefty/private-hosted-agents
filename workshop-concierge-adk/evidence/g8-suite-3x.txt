@@ -1,0 +1,6 @@
+=== suite run 1 ===
+93 passed, 2 warnings in 2.34s
+=== suite run 2 ===
+93 passed, 2 warnings in 2.34s
+=== suite run 3 ===
+93 passed, 2 warnings in 2.27s

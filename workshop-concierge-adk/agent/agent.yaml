@@ -1,0 +1,8 @@
+name: workshop-concierge
+template:
+    description: Deterministic ADK workshop track concierge on the Responses protocol
+    kind: hosted
+    name: workshop-concierge
+    protocols:
+        - protocol: responses
+          version: 2.0.0

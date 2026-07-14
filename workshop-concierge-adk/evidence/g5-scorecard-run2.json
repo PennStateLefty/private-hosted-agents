@@ -1,0 +1,80 @@
+{
+  "run": 2,
+  "correct": 12,
+  "total": 12,
+  "accuracy": 1.0,
+  "details": [
+    {
+      "query": "I'm a developer and I want to build an agent. Which workshop track should I take?",
+      "expected": "build",
+      "observed": "build",
+      "pass": true
+    },
+    {
+      "query": "As a software engineer whose goal is to build an agent, which track fits best?",
+      "expected": "build",
+      "observed": "build",
+      "pass": true
+    },
+    {
+      "query": "I'm a developer and I want to build an agent from scratch. Recommend a track.",
+      "expected": "build",
+      "observed": "build",
+      "pass": true
+    },
+    {
+      "query": "I'm an architect focused on integrating an agent into Teams. Recommend a track.",
+      "expected": "integrate",
+      "observed": "integrate",
+      "pass": true
+    },
+    {
+      "query": "Solution architect here, my goal is to integrate an agent. Which workshop track?",
+      "expected": "integrate",
+      "observed": "integrate",
+      "pass": true
+    },
+    {
+      "query": "I'm a developer but my goal is to integrate an agent into an app. Which track?",
+      "expected": "integrate",
+      "observed": "integrate",
+      "pass": true
+    },
+    {
+      "query": "Executive whose goal is to integrate an agent. Which track should I attend?",
+      "expected": "integrate",
+      "observed": "integrate",
+      "pass": true
+    },
+    {
+      "query": "I'm a business leader who needs to govern and operate agents. Which track?",
+      "expected": "govern",
+      "observed": "govern",
+      "pass": true
+    },
+    {
+      "query": "As a manager, my goal is to govern agents across the org. Which track fits?",
+      "expected": "govern",
+      "observed": "govern",
+      "pass": true
+    },
+    {
+      "query": "Architect wanting to govern and operate agents \u2014 which workshop track?",
+      "expected": "govern",
+      "observed": "govern",
+      "pass": true
+    },
+    {
+      "query": "I'm a business leader and I want to build an agent. Which track?",
+      "expected": "build",
+      "observed": "build",
+      "pass": true
+    },
+    {
+      "query": "Engineer whose goal is to govern agents. Which track should I pick?",
+      "expected": "govern",
+      "observed": "govern",
+      "pass": true
+    }
+  ]
+}

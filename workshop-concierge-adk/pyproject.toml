@@ -1,0 +1,35 @@
+[project]
+name = "workshop-concierge-adk"
+version = "0.1.0"
+description = "Workshop Concierge — a Google ADK agent adapted to the Foundry Hosted Agent Responses protocol."
+requires-python = ">=3.13"
+# Pinned to the versions validated in this environment (see requirements.txt for
+# the fully-resolved container lock).
+dependencies = [
+    "google-adk==2.4.0",
+    "litellm==1.91.1",
+    "azure-ai-agentserver-responses==1.0.0b8",
+    "azure-ai-projects>=2.1.0",
+    "azure-identity>=1.25.3",
+    "openai>=2.0.0",
+    "opentelemetry-api==1.42.1",
+    "opentelemetry-sdk==1.42.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=1.0", "httpx"]
+# Local, test-only Teams App Test Tool host (tools/teams-testtool/). NOT a runtime
+# dependency — the deployed agent has no custom bot host (see KNOWN-ISSUES.md #1).
+testtool = ["aiohttp>=3.9"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["src", "tests"]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# azd (agent env state — never commit)
+.azure/
+
+# local secrets / env
+.env
+*.local
+
+# evidence artifacts that may contain endpoints (kept sanitized when committed)
+evidence/*.local.md

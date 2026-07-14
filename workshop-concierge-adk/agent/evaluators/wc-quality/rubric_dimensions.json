@@ -1,0 +1,38 @@
+[
+  {
+    "id": "correct_workshop_outcome",
+    "description": "The agent reaches the correct workshop coordination outcome for the case, such as the right plan, clarification, escalation, or confirmed action when supported by the transcript and available tool results.",
+    "weight": 10
+  },
+  {
+    "id": "preserves_request_state",
+    "description": "The agent correctly carries forward previously stated workshop constraints and updates across turns, without dropping, contradicting, or silently changing key slots such as date, time, location, headcount, materials, or equipment.",
+    "weight": 6
+  },
+  {
+    "id": "appropriate_clarification",
+    "description": "When the request is underspecified or ambiguous, the agent asks targeted clarifying questions focused on the missing critical information, and avoids unnecessary questions when enough information is already present.",
+    "weight": 5
+  },
+  {
+    "id": "no_unsupported_commitments",
+    "description": "The agent does not claim bookings, reservations, approvals, availability, or other external commitments unless they are supported by observable tool results or explicit external state in the transcript.",
+    "weight": 6
+  },
+  {
+    "id": "tool_and_action_alignment",
+    "description": "When tools are available and needed, the agent uses the relevant tool with correct parameters and reflects the returned state accurately in subsequent messages.",
+    "weight": 5
+  },
+  {
+    "id": "blocker_handling",
+    "description": "The agent clearly surfaces blockers, dependencies, or authority limits and appropriately defers, escalates, or requests missing input rather than proceeding as if the task were complete.",
+    "weight": 4
+  },
+  {
+    "id": "general_quality",
+    "description": "Other important quality factors not covered by listed criteria.",
+    "weight": 5,
+    "always_applicable": true
+  }
+]

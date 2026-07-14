@@ -1,0 +1,9 @@
+# BYO pre-built image: no source is packaged. Exclude tooling + secrets.
+agent.yaml
+agent.manifest.yaml
+azure.yaml
+.agentignore
+.env
+.env.*
+.azure/
+.git/

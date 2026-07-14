@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "${{BOT_MSA_APP_ID}}",
+  "packageName": "org.mcaps.workshopconcierge",
+  "developer": {
+    "name": "MCAPS Private Hosted Agents",
+    "websiteUrl": "https://example.microsoft.com/workshop-concierge",
+    "privacyUrl": "https://example.microsoft.com/workshop-concierge/privacy",
+    "termsOfUseUrl": "https://example.microsoft.com/workshop-concierge/terms"
+  },
+  "name": {
+    "short": "Workshop Concierge",
+    "full": "Workshop Concierge (Private Hosted Agent)"
+  },
+  "description": {
+    "short": "Recommends a workshop track from your role and goal.",
+    "full": "Workshop Concierge is a private-network Foundry hosted agent that recommends a Build, Govern, or Operate workshop track based on your role and goal, using Adaptive Cards. It makes no external commitments — it records enrollment intent only."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0F6CBD",
+  "bots": [
+    {
+      "botId": "${{BOT_MSA_APP_ID}}",
+      "scopes": [ "personal", "team", "groupChat" ],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": [ "identity", "messageTeamMembers" ],
+  "validDomains": []
+}

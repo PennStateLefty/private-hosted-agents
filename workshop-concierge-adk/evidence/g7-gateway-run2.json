@@ -1,0 +1,19 @@
+{
+  "run": 2,
+  "enforce": {
+    "tpm": 100,
+    "status": 429,
+    "remaining_tokens": "100",
+    "retry_after": "60",
+    "message": "Token limit will exceed based on estimated request tokens. Try again in 60 seconds.",
+    "ok": true
+  },
+  "restore": {
+    "tpm": 20000,
+    "status": 200,
+    "remaining_tokens": "19977",
+    "completion": "Hello, world, friend",
+    "ok": true
+  },
+  "pass": true
+}

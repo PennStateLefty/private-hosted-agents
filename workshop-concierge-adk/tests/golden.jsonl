@@ -1,0 +1,12 @@
+{"query": "I'm a developer and I want to build an agent. Which workshop track should I take?", "ground_truth": "Recommend the Build track, because the goal is to build an agent."}
+{"query": "As a software engineer whose goal is to build an agent, which track fits best?", "ground_truth": "Recommend the Build track, because the goal is to build an agent."}
+{"query": "I'm a developer and I want to build an agent from scratch. Recommend a track.", "ground_truth": "Recommend the Build track, because the goal is to build an agent."}
+{"query": "I'm an architect focused on integrating an agent into Teams. Recommend a track.", "ground_truth": "Recommend the Integrate track, because the goal is to integrate an agent."}
+{"query": "Solution architect here, my goal is to integrate an agent. Which workshop track?", "ground_truth": "Recommend the Integrate track, because the goal is to integrate an agent."}
+{"query": "I'm a developer but my goal is to integrate an agent into an app. Which track?", "ground_truth": "Recommend the Integrate track, because the goal is to integrate an agent."}
+{"query": "Executive whose goal is to integrate an agent. Which track should I attend?", "ground_truth": "Recommend the Integrate track, because the goal is to integrate an agent."}
+{"query": "I'm a business leader who needs to govern and operate agents. Which track?", "ground_truth": "Recommend the Govern track, because the goal is to govern and operate agents."}
+{"query": "As a manager, my goal is to govern agents across the org. Which track fits?", "ground_truth": "Recommend the Govern track, because the goal is to govern and operate agents."}
+{"query": "Architect wanting to govern and operate agents — which workshop track?", "ground_truth": "Recommend the Govern track, because the goal is to govern and operate agents."}
+{"query": "I'm a business leader and I want to build an agent. Which track?", "ground_truth": "Recommend the Build track, because the goal is to build an agent."}
+{"query": "Engineer whose goal is to govern agents. Which track should I pick?", "ground_truth": "Recommend the Govern track, because the goal is to govern and operate agents."}

@@ -1,0 +1,57 @@
+# Deterministic recommendation matrix — version-controlled.
+# Primary track is driven by the user's GOAL; the alternative is driven by ROLE
+# affinity. recommend_track() is a pure function over this data.
+version: 1
+
+roles:
+  - developer
+  - architect
+  - business_leader
+
+goals:
+  - build_agent
+  - integrate_agent
+  - govern_agents
+
+# The goal deterministically selects the primary track.
+goal_to_track:
+  build_agent: build
+  integrate_agent: integrate
+  govern_agents: govern
+
+# Role affinity gives a deterministic, ordered preference used to pick the single
+# alternative track (and to re-derive a primary if the natural one is excluded).
+role_affinity:
+  developer: [build, integrate, govern]
+  architect: [integrate, govern, build]
+  business_leader: [govern, integrate, build]
+
+# Normalization: map free-text card / model values to canonical role/goal keys.
+role_aliases:
+  developer: developer
+  dev: developer
+  engineer: developer
+  software engineer: developer
+  architect: architect
+  solution architect: architect
+  cloud architect: architect
+  business leader: business_leader
+  business: business_leader
+  leader: business_leader
+  manager: business_leader
+  executive: business_leader
+
+goal_aliases:
+  build an agent: build_agent
+  build: build_agent
+  build agent: build_agent
+  create an agent: build_agent
+  integrate an agent: integrate_agent
+  integrate: integrate_agent
+  integrate agent: integrate_agent
+  connect an agent: integrate_agent
+  govern and operate agents: govern_agents
+  govern: govern_agents
+  govern agents: govern_agents
+  operate agents: govern_agents
+  govern and operate: govern_agents

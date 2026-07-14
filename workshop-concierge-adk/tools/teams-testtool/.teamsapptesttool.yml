@@ -1,0 +1,7 @@
+# Microsoft 365 Agents Playground (Teams App Test Tool) config.
+# The Playground reads this from the current working directory. It points the tool at
+# the LOCAL host started by ./run-bot.sh. (This is also the tool's default, but we pin
+# it explicitly so the run steps are unambiguous.)
+version: v1.0
+config:
+  botEndpoint: http://localhost:3978/api/messages

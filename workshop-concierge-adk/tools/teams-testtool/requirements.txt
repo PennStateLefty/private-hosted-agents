@@ -1,0 +1,9 @@
+# Test-only dependencies for the local Teams App Test Tool host.
+# Installed into a throwaway virtualenv — NOT added to the shipped runtime
+# dependencies in pyproject.toml (see the [project.optional-dependencies] "testtool"
+# group, which mirrors this).
+#
+# Deliberately raw-aiohttp only: on this machine's Python 3.14 the pinned
+# botbuilder-core / litellm stack does not install, and the Test Tool needs no bot
+# auth, so a minimal connector client is sufficient.
+aiohttp>=3.9
